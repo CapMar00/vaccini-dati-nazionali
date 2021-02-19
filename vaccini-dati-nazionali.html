@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="#" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,660"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <title>Vaccini dati nazionali</title>
+  </head>
+
+  <style>
+    * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    scroll-behavior: smooth;
+  }
+
+body {
+    width: 100%;
+    max-width: 800px;
+    margin: auto;
+    font-family: "Source Sans Pro", Arial, Helvetica, sans-serif;
+    background-color: transparent;
+  }
+  #dati_nazionali {
+      font-size: 20px;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 50px;
+  }
+
+  #dati_nazionali td,
+  #dati_nazionali th {
+    border: 1px solid #ddd;
+    padding: 20px 8px;
+    text-align: right;
+  }
+
+  #dati_nazionali tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+
+  /* #dati_nazionali tr:hover {
+    background-color: #ddd;
+  } */
+
+  #dati_nazionali th {
+    background-color: #196fe1;
+    color: white;
+  }
+
+  #download-wrapper {
+    margin-top: 50px;
+    cursor: pointer;
+    color: #196fe1;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+#download-wrapper:hover {
+    text-decoration: underline;
+}
+
+  #fonte {
+      margin-top: 30px;
+      font-size: 16px;
+  }
+  </style>
+
+  <body>
+    <table id="dati_nazionali">
+      <thead>
+        <tr>
+          <th valign="bottom">Somministrazioni</th>
+          <th valign="bottom">Prima dose</th>
+          <th valign="bottom">Seconda dose (vaccinati)</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <td id="somministrazioni"></td>
+        <td id="prima_dose"></td>
+        <td id="seconda_dose"></td>
+      </tbody>
+    </table>
+
+    <div id="download-wrapper">Scarica csv</div>
+
+    <div id="fonte">
+      Fonte:
+      <a
+        href="https://github.com/italia/covid19-opendata-vaccini/blob/master/dati/somministrazioni-vaccini-summary-latest.json"
+        target="_blank"
+        rel="noopener noreferrer"
+        >somministrazioni-vaccini-summary-latest.json</a
+      >
+    </div>
+
+    <script>
+      var headers = {
+        somministrazioni: "Somministrazioni".replace(/,/g, ""),
+        prima_dose: "Prima dose",
+        seconda_dose: "Seconda dose",
+      };
+
+      var itemsFormatted = [];
+
+      var fileTitle = "vaccini-dati-nazionali";
+
+      var fileVersion = Math.floor(100000 + Math.random() * 900000);
+      var somministrazioni = 0;
+      var primaDose = 0;
+      var secondaDose = 0;
+
+      fetch(
+        "https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/somministrazioni-vaccini-summary-latest.json?v=" +
+          fileVersion
+      )
+        .then((response) => response.json())
+        .then((dataset) => sumDataset(dataset.data))
+        .catch(function (error) {
+          console.log(error);
+        });
+
+      function sumDataset(data) {
+        //console.log("data", data);
+
+        data.forEach((el) => {
+          somministrazioni = somministrazioni + el.totale;
+          primaDose = primaDose + el.prima_dose;
+          secondaDose = secondaDose + el.seconda_dose;
+        });
+
+        itemsFormatted.push({
+          somministrazioni: somministrazioni,
+          prima_dose: primaDose,
+          seconda_dose: secondaDose,
+        });
+
+        document.getElementById(
+          "somministrazioni"
+        ).innerHTML = somministrazioni;
+        document.getElementById("prima_dose").innerHTML = primaDose;
+        document.getElementById("seconda_dose").innerHTML = secondaDose;
+      }
+
+      // JSON TO CSV thanks to Danny Pule
+      // http://codepen.io/danny_pule/pen/WRgqNx
+      // https://medium.com/@danny.pule/export-json-to-csv-file-using-javascript-a0b7bc5b00d2
+
+      function convertToCSV(objArray) {
+        var array =
+          typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+        var str = "";
+
+        for (var i = 0; i < array.length; i++) {
+          var line = "";
+          for (var index in array[i]) {
+            if (line != "") line += ",";
+
+            line += array[i][index];
+          }
+
+          str += line + "\r\n";
+        }
+
+        return str;
+      }
+
+      function exportCSVFile(headers, items, fileTitle) {
+        if (headers) {
+          items.unshift(headers);
+        }
+
+        var jsonObject = JSON.stringify(items);
+
+        var csv = this.convertToCSV(jsonObject);
+
+        var exportedFilenmae = fileTitle + ".csv" || "export.csv";
+
+        var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        if (navigator.msSaveBlob) {
+          // IE 10+
+          navigator.msSaveBlob(blob, exportedFilenmae);
+        } else {
+          var link = document.createElement("a");
+          if (link.download !== undefined) {
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", exportedFilenmae);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }
+      }
+
+      document
+        .getElementById("download-wrapper")
+        .addEventListener("click", function () {
+          exportCSVFile(headers, itemsFormatted, fileTitle);
+        });
+    </script>
+  </body>
+</html>
